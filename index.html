@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление дверьми Hikvision</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .login-form {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            margin: 50px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .login-form h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #5a6fd8;
+        }
+
+        .user-info {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .device-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .device-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .device-ip {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .device-info {
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-open { background: #4CAF50; }
+        .status-close { background: #f44336; }
+        .status-resume { background: #2196F3; }
+        .status-unknown { background: #9E9E9E; }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 5px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-open {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-resume {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-close {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.active {
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.2);
+            transform: scale(1.05);
+        }
+
+        .last-update {
+            font-size: 0.8rem;
+            color: #888;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin: 40px 0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #4CAF50;
+        }
+
+        .notification.error {
+            background: #f44336;
+        }
+
+        .auto-refresh {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .refresh-info {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="login-section">
+            <header>
+                <h1>🚪 Управление дверьми Hikvision</h1>
+                <div class="subtitle">Централизованное управление доступом</div>
+            </header>
+
+            <div class="login-form">
+                <h2>Вход в систему</h2>
+                <div class="form-group">
+                    <label for="login-input">Логин (email):</label>
+                    <input type="text" id="login-input" placeholder="Введите ваш логин" autocomplete="username">
+                </div>
+                <button class="btn-login" onclick="controller.login()">Войти</button>
+                <div style="margin-top: 15px; font-size: 0.9rem; color: #666; text-align: center;">
+                    Пример: admin@school25.ru
+                </div>
+            </div>
+        </div>
+
+        <div id="main-section" class="hidden">
+            <header>
+                <h1>🚪 Управление дверьми Hikvision</h1>
+                <div class="subtitle">Централизованное управление доступом</div>
+            </header>
+
+            <div class="user-info">
+                Вы вошли как: <strong id="current-user"></strong> 
+                <button onclick="controller.logout()" style="margin-left: 10px; background: rgba(255,255,255,0.3); border: none; color: white; padding: 2px 8px; border-radius: 10px; cursor: pointer;">Выйти</button>
+            </div>
+
+            <div class="auto-refresh">
+                <div class="refresh-info">
+                    🔄 Следующее обновление: <span id="countdown">15</span>с
+                </div>
+            </div>
+
+            <div id="devices-container" class="devices-grid">
+                <div class="loading">Загрузка устройств...</div>
+            </div>
+
+            <div id="notification" class="notification"></div>
+        </div>
+    </div>
+
+    <script>
+        class DoorController {
+            constructor() {
+                this.devices = [];
+                this.currentUser = null;
+                this.refreshInterval = 15000;
+                this.countdown = 15;
+                this.init();
+            }
+
+            init() {
+                // Проверяем, есть ли сохраненный логин в localStorage
+                const savedLogin = localStorage.getItem('doorControlUser');
+                if (savedLogin) {
+                    this.currentUser = savedLogin;
+                    this.showMainSection();
+                    this.loadDevices();
+                    this.startAutoRefresh();
+                    this.setupCountdown();
+                } else {
+                    this.showLoginSection();
+                }
+            }
+
+            login() {
+                const loginInput = document.getElementById('login-input');
+                const login = loginInput.value.trim();
+                
+                if (!login) {
+                    this.showNotification('Введите логин', 'error');
+                    return;
+                }
+
+                // Проверяем доступ пользователя
+                this.checkUserAccess(login).then(hasAccess => {
+                    if (hasAccess) {
+                        this.currentUser = login;
+                        localStorage.setItem('doorControlUser', login);
+                        this.showMainSection();
+                        this.loadDevices();
+                        this.startAutoRefresh();
+                        this.setupCountdown();
+                        this.showNotification('Успешный вход в систему', 'success');
+                    } else {
+                        this.showNotification('Доступ запрещен или пользователь не найден', 'error');
+                    }
+                }).catch(error => {
+                    console.error('Login error:', error);
+                    this.showNotification('Ошибка при проверке доступа', 'error');
+                });
+            }
+
+            async checkUserAccess(login) {
+                try {
+                    const response = await fetch(`/api/devices?login=${encodeURIComponent(login)}`);
+                    return response.ok;
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('doorControlUser');
+                this.showLoginSection();
+                this.showNotification('Вы вышли из системы', 'success');
+            }
+
+            showLoginSection() {
+                document.getElementById('login-section').classList.remove('hidden');
+                document.getElementById('main-section').classList.add('hidden');
+            }
+
+            showMainSection() {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('main-section').classList.remove('hidden');
+                document.getElementById('current-user').textContent = this.currentUser;
+            }
+
+            async loadDevices() {
+                if (!this.currentUser) return;
+
+                try {
+                    const response = await fetch(`/api/devices?login=${encodeURIComponent(this.currentUser)}`);
+                    if (!response.ok) throw new Error('Ошибка загрузки устройств');
+                    this.devices = await response.json();
+                    this.renderDevices();
+                } catch (error) {
+                    console.error('Error loading devices:', error);
+                    this.showNotification('Ошибка загрузки устройств', 'error');
+                }
+            }
+
+            renderDevices() {
+                const container = document.getElementById('devices-container');
+                
+                if (this.devices.length === 0) {
+                    container.innerHTML = '<div class="loading">Нет доступных устройств</div>';
+                    return;
+                }
+
+                container.innerHTML = this.devices.map(device => `
+                    <div class="device-card">
+                        <div class="device-header">
+                            <div class="device-name">${device.name}</div>
+                            <div class="device-ip">${this.getStatusText(device.lastStatus)}</div>
+                        </div>
+                        <div class="device-info">
+                            <div>
+                                Статус: 
+                                <span class="status-indicator status-${this.getStatusClass(device.lastStatus)}"></span>
+                                ${this.getStatusText(device.lastStatus)}
+                            </div>
+                            <div class="last-update">
+                                Обновлено: ${device.lastUpdate ? new Date(device.lastUpdate).toLocaleString('ru-RU') : 'никогда'}
+                            </div>
+                        </div>
+                        <div class="controls">
+                            <button class="btn btn-open ${device.lastStatus === 1 ? 'active' : ''}" 
+                                    onclick="controller.setDoorState('${device.ip}', 1)"
+                                    ${device.isLoading ? 'disabled' : ''}>
+                                🟢 Открыть
+                            </button>
+                            <button class="btn btn-resume ${device.lastStatus === 3 ? 'active' : ''}" 
+                                    onclick="controller.setDoorState('${device.ip}', 3)"
+                                    ${device.isLoading ? 'disabled' : ''}>
+                                🔵 Стандарт
+                            </button>
+                            <button class="btn btn-close ${device.lastStatus === 2 ? 'active' : ''}" 
+                                    onclick="controller.setDoorState('${device.ip}', 2)"
+                                    ${device.isLoading ? 'disabled' : ''}>
+                                🔴 Заблокировать
+                            </button>
+                        </div>
+                        ${device.isLoading ? '<div style="text-align: center; margin-top: 10px; color: #667eea;">⏳ Выполняется...</div>' : ''}
+                    </div>
+                `).join('');
+            }
+
+            getStatusClass(status) {
+                switch (status) {
+                    case 1: return 'open';
+                    case 2: return 'close';
+                    case 3: return 'resume';
+                    default: return 'unknown';
+                }
+            }
+
+            getStatusText(status) {
+                switch (status) {
+                    case 1: return 'Открыто';
+                    case 2: return 'Заблокировано';
+                    case 3: return 'Стандарт';
+                    default: return 'Неизвестно';
+                }
+            }
+
+            async setDoorState(ip, state) {
+                const device = this.devices.find(d => d.ip === ip);
+                if (!device) return;
+
+                device.isLoading = true;
+                this.renderDevices();
+
+                try {
+                    const response = await fetch('/api/control', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            ip: ip,
+                            state: state,
+                            login: this.currentUser
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        device.lastStatus = state;
+                        device.lastUpdate = new Date().toISOString();
+                        this.showNotification(`Устройство ${device.name} успешно обновлено`, 'success');
+                    } else {
+                        this.showNotification(`Ошибка: ${result.message}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error setting door state:', error);
+                    this.showNotification('Ошибка соединения', 'error');
+                }
+
+                device.isLoading = false;
+                this.renderDevices();
+            }
+
+            showNotification(message, type) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification ${type} show`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            startAutoRefresh() {
+                setInterval(() => {
+                    if (this.currentUser) {
+                        this.loadDevices();
+                        this.countdown = 15;
+                    }
+                }, this.refreshInterval);
+            }
+
+            setupCountdown() {
+                setInterval(() => {
+                    this.countdown--;
+                    if (this.countdown <= 0) this.countdown = 15;
+                    document.getElementById('countdown').textContent = this.countdown;
+                }, 1000);
+            }
+        }
+
+        let controller;
+        document.addEventListener('DOMContentLoaded', () => {
+            controller = new DoorController();
+            
+            // Обработка нажатия Enter в поле логина
+            document.getElementById('login-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    controller.login();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
